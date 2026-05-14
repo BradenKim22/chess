@@ -258,5 +258,8 @@ public class ChessGame {
         return Objects.equals(board, that.board) && teamTurn == that.teamTurn;
     }
 
-    
+    @Override
+    public int hashCode() {
+        return Objects.hash(board, teamTurn);
+    }
 }
