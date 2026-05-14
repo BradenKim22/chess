@@ -245,4 +245,18 @@ public class ChessGame {
 
         return false;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ChessGame)) {
+            return false;
+        }
+        ChessGame that = (ChessGame) o;
+        return Objects.equals(board, that.board) && teamTurn == that.teamTurn;
+    }
+
+    
 }
