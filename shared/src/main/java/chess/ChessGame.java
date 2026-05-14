@@ -71,6 +71,12 @@ public class ChessGame {
      */
     public boolean isInCheck(TeamColor teamColor) {
         throw new RuntimeException("Not implemented");
+        /**
+         * Find the king for this color.
+         * Check the board for all enemies (different color)
+         * See if any of the enemies attack position is the same as the specified team's King position.
+         * return true if it is. return false if not.
+         */
     }
 
     /**
