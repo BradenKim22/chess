@@ -14,6 +14,8 @@ import request.RegisterRequest;
 import result.AuthResult;
 import result.ErrorResult;
 
+import request.LoginRequest;
+
 public class Server {
 
     private final Gson gson = new Gson();
@@ -56,6 +58,29 @@ public class Server {
                 } else if (e.getMessage().equals("already taken")) {
                     ctx.status(403);
                     ctx.json(new ErrorResult("Error: already taken"));
+                } else {
+                    ctx.status(500);
+                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                }
+            }
+        });
+
+        app.post("/session", ctx -> {
+            try {
+                LoginRequest request = gson.fromJson(ctx.body(), LoginRequest.class);
+
+                AuthData auth = userService.login(request.username(), request.password());
+
+                ctx.status(200);
+                ctx.json(new AuthResult(auth.username(), auth.authToken()));
+
+            } catch (DataAccessException e) {
+                if (e.getMessage().equals("bad request")) {
+                    ctx.status(400);
+                    ctx.json(new ErrorResult("Error: bad request"));
+                } else if (e.getMessage().equals("unauthorized")) {
+                    ctx.status(401);
+                    ctx.json(new ErrorResult("Error: unauthorized"));
                 } else {
                     ctx.status(500);
                     ctx.json(new ErrorResult("Error: " + e.getMessage()));
