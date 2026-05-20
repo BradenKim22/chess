@@ -7,6 +7,13 @@ import service.ClearService;
 import service.GameService;
 import service.UserService;
 
+import dataaccess.DataAccessException;
+import model.AuthData;
+import model.UserData;
+import request.RegisterRequest;
+import result.AuthResult;
+import result.ErrorResult;
+
 public class Server {
 
     private final Gson gson = new Gson();
@@ -25,6 +32,35 @@ public class Server {
             clearService.clear();
             ctx.status(200);
             ctx.result("{}");
+        });
+
+        app.post("/user", ctx -> {
+            try {
+                RegisterRequest request = gson.fromJson(ctx.body(), RegisterRequest.class);
+
+                UserData user = new UserData(
+                        request.username(),
+                        request.password(),
+                        request.email()
+                );
+
+                AuthData auth = userService.register(user);
+
+                ctx.status(200);
+                ctx.json(new AuthResult(auth.username(), auth.authToken()));
+
+            } catch (DataAccessException e) {
+                if (e.getMessage().equals("bad request")) {
+                    ctx.status(400);
+                    ctx.json(new ErrorResult("Error: bad request"));
+                } else if (e.getMessage().equals("already taken")) {
+                    ctx.status(403);
+                    ctx.json(new ErrorResult("Error: already taken"));
+                } else {
+                    ctx.status(500);
+                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                }
+            }
         });
 
         app.start(desiredPort);
