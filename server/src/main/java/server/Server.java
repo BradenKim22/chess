@@ -16,6 +16,13 @@ import result.ErrorResult;
 
 import request.LoginRequest;
 
+import model.GameData;
+import result.GameSummary;
+import result.ListGamesResult;
+
+import java.util.ArrayList;
+import java.util.Collection;
+
 public class Server {
 
     private final Gson gson = new Gson();
@@ -96,6 +103,39 @@ public class Server {
 
                 ctx.status(200);
                 ctx.result("{}");
+
+            } catch (DataAccessException e) {
+                if (e.getMessage().equals("unauthorized")) {
+                    ctx.status(401);
+                    ctx.json(new ErrorResult("Error: unauthorized"));
+                } else {
+                    ctx.status(500);
+                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                }
+            }
+        });
+
+        app.get("/game", ctx -> {
+            try {
+                String authToken = ctx.header("authorization");
+
+                Collection<GameData> games = gameService.listGames(authToken);
+
+                Collection<GameSummary> gameSummaries = new ArrayList<>();
+
+                for (GameData game : games) {
+                    GameSummary summary = new GameSummary(
+                            game.gameID(),
+                            game.whiteUsername(),
+                            game.blackUsername(),
+                            game.gameName()
+                    );
+
+                    gameSummaries.add(summary);
+                }
+
+                ctx.status(200);
+                ctx.json(new ListGamesResult(gameSummaries));
 
             } catch (DataAccessException e) {
                 if (e.getMessage().equals("unauthorized")) {
