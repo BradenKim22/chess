@@ -88,6 +88,26 @@ public class Server {
             }
         });
 
+        app.delete("/session", ctx -> {
+            try {
+                String authToken = ctx.header("authorization");
+
+                userService.logout(authToken);
+
+                ctx.status(200);
+                ctx.result("{}");
+
+            } catch (DataAccessException e) {
+                if (e.getMessage().equals("unauthorized")) {
+                    ctx.status(401);
+                    ctx.json(new ErrorResult("Error: unauthorized"));
+                } else {
+                    ctx.status(500);
+                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                }
+            }
+        });
+
         app.start(desiredPort);
         return app.port();
     }
