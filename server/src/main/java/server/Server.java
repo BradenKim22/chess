@@ -28,6 +28,8 @@ import result.CreateGameResult;
 
 import request.JoinGameRequest;
 
+import io.javalin.http.staticfiles.Location;
+
 public class Server {
 
     private final Gson gson = new Gson();
@@ -37,15 +39,26 @@ public class Server {
     private final UserService userService = new UserService(dataAccess);
     private final GameService gameService = new GameService(dataAccess);
 
+    private Javalin app;
+
     public int run(int desiredPort) {
-        Javalin app = Javalin.create(config -> {
-            config.staticFiles.add("web");
+        app = Javalin.create(config -> {
+            config.staticFiles.add(staticFiles -> {
+                staticFiles.hostedPath = "/";
+                staticFiles.directory = "/web";
+                staticFiles.location = Location.CLASSPATH;
+            });
         });
 
         app.delete("/db", ctx -> {
-            clearService.clear();
-            ctx.status(200);
-            ctx.result("{}");
+            try {
+                clearService.clear();
+                ctx.status(200);
+                ctx.result("{}");
+            } catch (DataAccessException e) {
+                ctx.status(500);
+                ctx.result(gson.toJson(new ErrorResult("Error: " + e.getMessage())));
+            }
         });
 
         app.post("/user", ctx -> {
@@ -61,18 +74,18 @@ public class Server {
                 AuthData auth = userService.register(user);
 
                 ctx.status(200);
-                ctx.json(new AuthResult(auth.username(), auth.authToken()));
+                ctx.result(gson.toJson(new AuthResult(auth.username(), auth.authToken())));
 
             } catch (DataAccessException e) {
                 if (e.getMessage().equals("bad request")) {
                     ctx.status(400);
-                    ctx.json(new ErrorResult("Error: bad request"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: bad request")));
                 } else if (e.getMessage().equals("already taken")) {
                     ctx.status(403);
-                    ctx.json(new ErrorResult("Error: already taken"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: already taken")));
                 } else {
                     ctx.status(500);
-                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                    ctx.result(gson.toJson(new ErrorResult("Error: " + e.getMessage())));
                 }
             }
         });
@@ -84,18 +97,18 @@ public class Server {
                 AuthData auth = userService.login(request.username(), request.password());
 
                 ctx.status(200);
-                ctx.json(new AuthResult(auth.username(), auth.authToken()));
+                ctx.result(gson.toJson(new AuthResult(auth.username(), auth.authToken())));
 
             } catch (DataAccessException e) {
                 if (e.getMessage().equals("bad request")) {
                     ctx.status(400);
-                    ctx.json(new ErrorResult("Error: bad request"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: bad request")));
                 } else if (e.getMessage().equals("unauthorized")) {
                     ctx.status(401);
-                    ctx.json(new ErrorResult("Error: unauthorized"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: unauthorized")));
                 } else {
                     ctx.status(500);
-                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                    ctx.result(gson.toJson(new ErrorResult("Error: " + e.getMessage())));
                 }
             }
         });
@@ -112,10 +125,10 @@ public class Server {
             } catch (DataAccessException e) {
                 if (e.getMessage().equals("unauthorized")) {
                     ctx.status(401);
-                    ctx.json(new ErrorResult("Error: unauthorized"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: unauthorized")));
                 } else {
                     ctx.status(500);
-                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                    ctx.result(gson.toJson(new ErrorResult("Error: " + e.getMessage())));
                 }
             }
         });
@@ -125,30 +138,27 @@ public class Server {
                 String authToken = ctx.header("authorization");
 
                 Collection<GameData> games = gameService.listGames(authToken);
-
                 Collection<GameSummary> gameSummaries = new ArrayList<>();
 
                 for (GameData game : games) {
-                    GameSummary summary = new GameSummary(
+                    gameSummaries.add(new GameSummary(
                             game.gameID(),
                             game.whiteUsername(),
                             game.blackUsername(),
                             game.gameName()
-                    );
-
-                    gameSummaries.add(summary);
+                    ));
                 }
 
                 ctx.status(200);
-                ctx.json(new ListGamesResult(gameSummaries));
+                ctx.result(gson.toJson(new ListGamesResult(gameSummaries)));
 
             } catch (DataAccessException e) {
                 if (e.getMessage().equals("unauthorized")) {
                     ctx.status(401);
-                    ctx.json(new ErrorResult("Error: unauthorized"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: unauthorized")));
                 } else {
                     ctx.status(500);
-                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                    ctx.result(gson.toJson(new ErrorResult("Error: " + e.getMessage())));
                 }
             }
         });
@@ -162,18 +172,18 @@ public class Server {
                 int gameID = gameService.createGame(authToken, request.gameName());
 
                 ctx.status(200);
-                ctx.json(new CreateGameResult(gameID));
+                ctx.result(gson.toJson(new CreateGameResult(gameID)));
 
             } catch (DataAccessException e) {
                 if (e.getMessage().equals("bad request")) {
                     ctx.status(400);
-                    ctx.json(new ErrorResult("Error: bad request"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: bad request")));
                 } else if (e.getMessage().equals("unauthorized")) {
                     ctx.status(401);
-                    ctx.json(new ErrorResult("Error: unauthorized"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: unauthorized")));
                 } else {
                     ctx.status(500);
-                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                    ctx.result(gson.toJson(new ErrorResult("Error: " + e.getMessage())));
                 }
             }
         });
@@ -192,21 +202,25 @@ public class Server {
             } catch (DataAccessException e) {
                 if (e.getMessage().equals("bad request")) {
                     ctx.status(400);
-                    ctx.json(new ErrorResult("Error: bad request"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: bad request")));
                 } else if (e.getMessage().equals("unauthorized")) {
                     ctx.status(401);
-                    ctx.json(new ErrorResult("Error: unauthorized"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: unauthorized")));
                 } else if (e.getMessage().equals("already taken")) {
                     ctx.status(403);
-                    ctx.json(new ErrorResult("Error: already taken"));
+                    ctx.result(gson.toJson(new ErrorResult("Error: already taken")));
                 } else {
                     ctx.status(500);
-                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                    ctx.result(gson.toJson(new ErrorResult("Error: " + e.getMessage())));
                 }
             }
         });
 
         app.start(desiredPort);
         return app.port();
+    }
+
+    public void stop() {
+        app.stop();
     }
 }
