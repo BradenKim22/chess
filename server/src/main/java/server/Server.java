@@ -23,6 +23,11 @@ import result.ListGamesResult;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import request.CreateGameRequest;
+import result.CreateGameResult;
+
+import request.JoinGameRequest;
+
 public class Server {
 
     private final Gson gson = new Gson();
@@ -141,6 +146,59 @@ public class Server {
                 if (e.getMessage().equals("unauthorized")) {
                     ctx.status(401);
                     ctx.json(new ErrorResult("Error: unauthorized"));
+                } else {
+                    ctx.status(500);
+                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                }
+            }
+        });
+
+        app.post("/game", ctx -> {
+            try {
+                String authToken = ctx.header("authorization");
+
+                CreateGameRequest request = gson.fromJson(ctx.body(), CreateGameRequest.class);
+
+                int gameID = gameService.createGame(authToken, request.gameName());
+
+                ctx.status(200);
+                ctx.json(new CreateGameResult(gameID));
+
+            } catch (DataAccessException e) {
+                if (e.getMessage().equals("bad request")) {
+                    ctx.status(400);
+                    ctx.json(new ErrorResult("Error: bad request"));
+                } else if (e.getMessage().equals("unauthorized")) {
+                    ctx.status(401);
+                    ctx.json(new ErrorResult("Error: unauthorized"));
+                } else {
+                    ctx.status(500);
+                    ctx.json(new ErrorResult("Error: " + e.getMessage()));
+                }
+            }
+        });
+
+        app.put("/game", ctx -> {
+            try {
+                String authToken = ctx.header("authorization");
+
+                JoinGameRequest request = gson.fromJson(ctx.body(), JoinGameRequest.class);
+
+                gameService.joinGame(authToken, request.playerColor(), request.gameID());
+
+                ctx.status(200);
+                ctx.result("{}");
+
+            } catch (DataAccessException e) {
+                if (e.getMessage().equals("bad request")) {
+                    ctx.status(400);
+                    ctx.json(new ErrorResult("Error: bad request"));
+                } else if (e.getMessage().equals("unauthorized")) {
+                    ctx.status(401);
+                    ctx.json(new ErrorResult("Error: unauthorized"));
+                } else if (e.getMessage().equals("already taken")) {
+                    ctx.status(403);
+                    ctx.json(new ErrorResult("Error: already taken"));
                 } else {
                     ctx.status(500);
                     ctx.json(new ErrorResult("Error: " + e.getMessage()));
