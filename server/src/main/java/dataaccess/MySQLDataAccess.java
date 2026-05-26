@@ -132,17 +132,69 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public void createAuth(AuthData auth) throws DataAccessException {
+        String sql = """
+            INSERT INTO auths (authToken, username)
+            VALUES (?, ?)
+            """;
 
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setString(1, auth.authToken());
+            statement.setString(2, auth.username());
+
+            statement.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new DataAccessException("failed to create auth", e);
+        }
     }
 
     @Override
     public AuthData getAuth(String authToken) throws DataAccessException {
+        String sql = """
+            SELECT authToken, username
+            FROM auths
+            WHERE authToken = ?
+            """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setString(1, authToken);
+
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next()) {
+                    return new AuthData(
+                            rs.getString("authToken"),
+                            rs.getString("username")
+                    );
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new DataAccessException("failed to get auth", e);
+        }
+
         return null;
     }
 
     @Override
     public void deleteAuth(String authToken) throws DataAccessException {
+        String sql = """
+            DELETE FROM auths
+            WHERE authToken = ?
+            """;
 
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setString(1, authToken);
+            statement.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new DataAccessException("failed to delete auth", e);
+        }
     }
 
     @Override
