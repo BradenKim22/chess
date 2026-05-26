@@ -80,11 +80,53 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public void createUser(UserData user) throws DataAccessException {
+        String sql = """
+            INSERT INTO users (username, password, email)
+            VALUES (?, ?, ?)
+            """;
 
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setString(1, user.username());
+            statement.setString(2, user.password());
+            statement.setString(3, user.email());
+
+            statement.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new DataAccessException("failed to create user", e);
+        }
     }
 
     @Override
     public UserData getUser(String username) throws DataAccessException {
+        String sql = """
+            SELECT username, password, email
+            FROM users
+            WHERE username = ?
+            """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setString(1, username);
+
+            try (ResultSet rs = statement.executeQuery()) {
+
+                if (rs.next()) {
+                    return new UserData(
+                            rs.getString("username"),
+                            rs.getString("password"),
+                            rs.getString("email")
+                    );
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new DataAccessException("failed to get user", e);
+        }
+
         return null;
     }
 
