@@ -1,7 +1,8 @@
 package server;
 
 import com.google.gson.Gson;
-import dataaccess.MemoryDataAccess;
+import dataaccess.MySQLDataAccess;
+import dataaccess.DataAccess;
 import io.javalin.Javalin;
 import service.ClearService;
 import service.GameService;
@@ -33,11 +34,25 @@ import io.javalin.http.staticfiles.Location;
 public class Server {
 
     private final Gson gson = new Gson();
-    private final MemoryDataAccess dataAccess = new MemoryDataAccess();
 
-    private final ClearService clearService = new ClearService(dataAccess);
-    private final UserService userService = new UserService(dataAccess);
-    private final GameService gameService = new GameService(dataAccess);
+    private final DataAccess dataAccess;
+
+    private final ClearService clearService;
+    private final UserService userService;
+    private final GameService gameService;
+
+    public Server() {
+        try {
+            dataAccess = new MySQLDataAccess();
+
+            clearService = new ClearService(dataAccess);
+            userService = new UserService(dataAccess);
+            gameService = new GameService(dataAccess);
+
+        } catch (DataAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private Javalin app;
 
