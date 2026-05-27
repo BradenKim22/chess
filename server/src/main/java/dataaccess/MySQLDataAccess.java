@@ -199,7 +199,35 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public int createGame(String gameName) throws DataAccessException {
-        return 0;
+        String sql = """
+            INSERT INTO games (whiteUsername, blackUsername, gameName, game)
+            VALUES (?, ?, ?, ?)
+            """;
+
+        ChessGame chessGame = new ChessGame();
+        String gameJson = gson.toJson(chessGame);
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            statement.setString(1, null);
+            statement.setString(2, null);
+            statement.setString(3, gameName);
+            statement.setString(4, gameJson);
+
+            statement.executeUpdate();
+
+            try (ResultSet rs = statement.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new DataAccessException("failed to create game", e);
+        }
+
+        throw new DataAccessException("failed to create game");
     }
 
     @Override
