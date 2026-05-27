@@ -232,6 +232,35 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public GameData getGame(int gameID) throws DataAccessException {
+        String sql = """
+            SELECT gameID, whiteUsername, blackUsername, gameName, game
+            FROM games
+            WHERE gameID = ?
+            """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setInt(1, gameID);
+
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next()) {
+                    ChessGame game = gson.fromJson(rs.getString("game"), ChessGame.class);
+
+                    return new GameData(
+                            rs.getInt("gameID"),
+                            rs.getString("whiteUsername"),
+                            rs.getString("blackUsername"),
+                            rs.getString("gameName"),
+                            game
+                    );
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new DataAccessException("failed to get game", e);
+        }
+
         return null;
     }
 
