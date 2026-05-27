@@ -20,7 +20,7 @@ public class MySQLDataAccess implements DataAccess {
     }
 
     private void createTables() throws DataAccessException {
-        String[] createStatements = {
+        String[] statements = {
                 """
                 CREATE TABLE IF NOT EXISTS users (
                     username VARCHAR(255) NOT NULL,
@@ -48,11 +48,9 @@ public class MySQLDataAccess implements DataAccess {
                 """
         };
 
-        try (Connection conn = DatabaseManager.getConnection()) {
-            for (String statement : createStatements) {
-                try (PreparedStatement preparedStatement = conn.prepareStatement(statement)) {
-                    preparedStatement.executeUpdate();
-                }
+        try (Connection connection = DatabaseManager.getConnection()) {
+            for (String statement : statements) {
+                executeUpdate(connection, statement);
             }
         } catch (SQLException e) {
             throw new DataAccessException("failed to create tables", e);
@@ -61,17 +59,15 @@ public class MySQLDataAccess implements DataAccess {
 
     @Override
     public void clear() throws DataAccessException {
-        String[] clearStatements = {
+        String[] statements = {
                 "DELETE FROM auths",
                 "DELETE FROM games",
                 "DELETE FROM users"
         };
 
-        try (Connection conn = DatabaseManager.getConnection()) {
-            for (String statement : clearStatements) {
-                try (PreparedStatement preparedStatement = conn.prepareStatement(statement)) {
-                    preparedStatement.executeUpdate();
-                }
+        try (Connection connection = DatabaseManager.getConnection()) {
+            for (String statement : statements) {
+                executeUpdate(connection, statement);
             }
         } catch (SQLException e) {
             throw new DataAccessException("failed to clear database", e);
@@ -81,19 +77,18 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public void createUser(UserData user) throws DataAccessException {
         String sql = """
-            INSERT INTO users (username, password, email)
-            VALUES (?, ?, ?)
-            """;
+                INSERT INTO users (username, password, email)
+                VALUES (?, ?, ?)
+                """;
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, user.username());
             statement.setString(2, user.password());
             statement.setString(3, user.email());
 
             statement.executeUpdate();
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to create user", e);
         }
@@ -102,27 +97,25 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public UserData getUser(String username) throws DataAccessException {
         String sql = """
-            SELECT username, password, email
-            FROM users
-            WHERE username = ?
-            """;
+                SELECT username, password, email
+                FROM users
+                WHERE username = ?
+                """;
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, username);
 
-            try (ResultSet rs = statement.executeQuery()) {
-
-                if (rs.next()) {
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
                     return new UserData(
-                            rs.getString("username"),
-                            rs.getString("password"),
-                            rs.getString("email")
+                            resultSet.getString("username"),
+                            resultSet.getString("password"),
+                            resultSet.getString("email")
                     );
                 }
             }
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to get user", e);
         }
@@ -133,18 +126,17 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public void createAuth(AuthData auth) throws DataAccessException {
         String sql = """
-            INSERT INTO auths (authToken, username)
-            VALUES (?, ?)
-            """;
+                INSERT INTO auths (authToken, username)
+                VALUES (?, ?)
+                """;
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, auth.authToken());
             statement.setString(2, auth.username());
 
             statement.executeUpdate();
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to create auth", e);
         }
@@ -153,25 +145,24 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public AuthData getAuth(String authToken) throws DataAccessException {
         String sql = """
-            SELECT authToken, username
-            FROM auths
-            WHERE authToken = ?
-            """;
+                SELECT authToken, username
+                FROM auths
+                WHERE authToken = ?
+                """;
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, authToken);
 
-            try (ResultSet rs = statement.executeQuery()) {
-                if (rs.next()) {
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
                     return new AuthData(
-                            rs.getString("authToken"),
-                            rs.getString("username")
+                            resultSet.getString("authToken"),
+                            resultSet.getString("username")
                     );
                 }
             }
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to get auth", e);
         }
@@ -182,16 +173,15 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public void deleteAuth(String authToken) throws DataAccessException {
         String sql = """
-            DELETE FROM auths
-            WHERE authToken = ?
-            """;
+                DELETE FROM auths
+                WHERE authToken = ?
+                """;
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, authToken);
             statement.executeUpdate();
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to delete auth", e);
         }
@@ -200,15 +190,15 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public int createGame(String gameName) throws DataAccessException {
         String sql = """
-            INSERT INTO games (whiteUsername, blackUsername, gameName, game)
-            VALUES (?, ?, ?, ?)
-            """;
+                INSERT INTO games (whiteUsername, blackUsername, gameName, game)
+                VALUES (?, ?, ?, ?)
+                """;
 
-        ChessGame chessGame = new ChessGame();
-        String gameJson = gson.toJson(chessGame);
+        ChessGame game = new ChessGame();
+        String gameJson = gson.toJson(game);
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             statement.setString(1, null);
             statement.setString(2, null);
@@ -217,12 +207,11 @@ public class MySQLDataAccess implements DataAccess {
 
             statement.executeUpdate();
 
-            try (ResultSet rs = statement.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
+            try (ResultSet resultSet = statement.getGeneratedKeys()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1);
                 }
             }
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to create game", e);
         }
@@ -233,30 +222,21 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public GameData getGame(int gameID) throws DataAccessException {
         String sql = """
-            SELECT gameID, whiteUsername, blackUsername, gameName, game
-            FROM games
-            WHERE gameID = ?
-            """;
+                SELECT gameID, whiteUsername, blackUsername, gameName, game
+                FROM games
+                WHERE gameID = ?
+                """;
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setInt(1, gameID);
 
-            try (ResultSet rs = statement.executeQuery()) {
-                if (rs.next()) {
-                    ChessGame game = gson.fromJson(rs.getString("game"), ChessGame.class);
-
-                    return new GameData(
-                            rs.getInt("gameID"),
-                            rs.getString("whiteUsername"),
-                            rs.getString("blackUsername"),
-                            rs.getString("gameName"),
-                            game
-                    );
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return readGame(resultSet);
                 }
             }
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to get game", e);
         }
@@ -267,28 +247,19 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public Collection<GameData> listGames() throws DataAccessException {
         String sql = """
-            SELECT gameID, whiteUsername, blackUsername, gameName, game
-            FROM games
-            """;
+                SELECT gameID, whiteUsername, blackUsername, gameName, game
+                FROM games
+                """;
 
         Collection<GameData> games = new ArrayList<>();
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql);
-             ResultSet rs = statement.executeQuery()) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
 
-            while (rs.next()) {
-                ChessGame game = gson.fromJson(rs.getString("game"), ChessGame.class);
-
-                games.add(new GameData(
-                        rs.getInt("gameID"),
-                        rs.getString("whiteUsername"),
-                        rs.getString("blackUsername"),
-                        rs.getString("gameName"),
-                        game
-                ));
+            while (resultSet.next()) {
+                games.add(readGame(resultSet));
             }
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to list games", e);
         }
@@ -299,26 +270,41 @@ public class MySQLDataAccess implements DataAccess {
     @Override
     public void updateGame(GameData game) throws DataAccessException {
         String sql = """
-            UPDATE games
-            SET whiteUsername = ?, blackUsername = ?, gameName = ?, game = ?
-            WHERE gameID = ?
-            """;
+                UPDATE games
+                SET whiteUsername = ?, blackUsername = ?, gameName = ?, game = ?
+                WHERE gameID = ?
+                """;
 
-        String gameJson = gson.toJson(game.game());
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, game.whiteUsername());
             statement.setString(2, game.blackUsername());
             statement.setString(3, game.gameName());
-            statement.setString(4, gameJson);
+            statement.setString(4, gson.toJson(game.game()));
             statement.setInt(5, game.gameID());
 
             statement.executeUpdate();
-
         } catch (SQLException e) {
             throw new DataAccessException("failed to update game", e);
+        }
+    }
+
+    private GameData readGame(ResultSet resultSet) throws SQLException {
+        ChessGame game = gson.fromJson(resultSet.getString("game"), ChessGame.class);
+
+        return new GameData(
+                resultSet.getInt("gameID"),
+                resultSet.getString("whiteUsername"),
+                resultSet.getString("blackUsername"),
+                resultSet.getString("gameName"),
+                game
+        );
+    }
+
+    private void executeUpdate(Connection connection, String sql) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.executeUpdate();
         }
     }
 }

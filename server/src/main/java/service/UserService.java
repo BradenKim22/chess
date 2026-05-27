@@ -25,19 +25,15 @@ public class UserService {
             throw new DataAccessException("already taken");
         }
 
-        String hashedPassword = BCrypt.hashpw(user.password(), BCrypt.gensalt());
-
-        UserData hashedUser = new UserData(
+        UserData userWithHashedPassword = new UserData(
                 user.username(),
-                hashedPassword,
+                BCrypt.hashpw(user.password(), BCrypt.gensalt()),
                 user.email()
         );
 
-        dataAccess.createUser(hashedUser);
+        dataAccess.createUser(userWithHashedPassword);
 
-        String token = UUID.randomUUID().toString();
-        AuthData auth = new AuthData(token, user.username());
-
+        AuthData auth = createAuth(user.username());
         dataAccess.createAuth(auth);
 
         return auth;
@@ -54,9 +50,7 @@ public class UserService {
             throw new DataAccessException("unauthorized");
         }
 
-        String token = UUID.randomUUID().toString();
-        AuthData auth = new AuthData(token, username);
-
+        AuthData auth = createAuth(username);
         dataAccess.createAuth(auth);
 
         return auth;
@@ -68,5 +62,10 @@ public class UserService {
         }
 
         dataAccess.deleteAuth(authToken);
+    }
+
+    private AuthData createAuth(String username) {
+        String authToken = UUID.randomUUID().toString();
+        return new AuthData(authToken, username);
     }
 }
