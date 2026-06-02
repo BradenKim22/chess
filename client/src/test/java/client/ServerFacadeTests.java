@@ -51,6 +51,15 @@ public class ServerFacadeTests {
     }
 
     @Test
+    public void registerAlreadyTaken() throws ResponseException {
+        facade.register("bob", "password", "bob@email.com");
+
+        Assertions.assertThrows(ResponseException.class, () ->
+                facade.register("bob", "password", "bob@email.com")
+        );
+    }
+
+    @Test
     public void loginSuccess() throws ResponseException {
         facade.register("bob", "password", "bob@email.com");
 
@@ -66,6 +75,58 @@ public class ServerFacadeTests {
 
         Assertions.assertThrows(ResponseException.class, () ->
                 facade.login("bob", "wrongPassword")
+        );
+    }
+
+    @Test
+    public void createGameSuccess() throws ResponseException {
+        AuthResult auth = facade.register("bob", "password", "bob@email.com");
+
+        var result = facade.createGame("My Game", auth.authToken());
+
+        Assertions.assertTrue(result.gameID() > 0);
+    }
+
+    @Test
+    public void createGameUnauthorized() {
+        Assertions.assertThrows(ResponseException.class, () ->
+                facade.createGame("My Game", "bad-token")
+        );
+    }
+
+    @Test
+    public void listGamesSuccess() throws ResponseException {
+        AuthResult auth = facade.register("bob", "password", "bob@email.com");
+
+        facade.createGame("My Game", auth.authToken());
+
+        var result = facade.listGames(auth.authToken());
+
+        Assertions.assertNotNull(result.games());
+    }
+
+    @Test
+    public void listGamesUnauthorized() {
+        Assertions.assertThrows(ResponseException.class, () ->
+                facade.listGames("bad-token")
+        );
+    }
+
+    @Test
+    public void logoutSuccess() throws ResponseException {
+        AuthResult auth = facade.register("bob", "password", "bob@email.com");
+
+        facade.logout(auth.authToken());
+
+        Assertions.assertThrows(ResponseException.class, () ->
+                facade.listGames(auth.authToken())
+        );
+    }
+
+    @Test
+    public void logoutUnauthorized() {
+        Assertions.assertThrows(ResponseException.class, () ->
+                facade.logout("bad-token")
         );
     }
 }
