@@ -3,7 +3,12 @@ package client.repl;
 import client.server.ResponseException;
 import client.server.ServerFacade;
 import result.AuthResult;
+import result.CreateGameResult;
+import result.GameSummary;
+import result.ListGamesResult;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Scanner;
 
 public class Repl {
@@ -14,6 +19,7 @@ public class Repl {
     private boolean loggedIn = false;
     private String authToken;
     private String username;
+    private final ArrayList<GameSummary> listedGames = new ArrayList<>();
 
     public Repl(String serverUrl) {
         serverFacade = new ServerFacade(serverUrl);
@@ -29,12 +35,12 @@ public class Repl {
             printPrompt();
 
             String input = scanner.nextLine().trim();
-            String[] tokens = input.split("\\s+");
 
             if (input.isEmpty()) {
                 continue;
             }
 
+            String[] tokens = input.split("\\s+");
             String command = tokens[0].toLowerCase();
 
             switch (command) {
@@ -42,6 +48,7 @@ public class Repl {
                 case "help" -> printHelp();
                 case "register" -> register(tokens);
                 case "login" -> login(tokens);
+                case "logout" -> logout();
                 default -> System.out.println("Unknown command. Type help.");
             }
         }
@@ -50,6 +57,11 @@ public class Repl {
     }
 
     private void register(String[] tokens) {
+        if (loggedIn) {
+            System.out.println("You are already logged in.");
+            return;
+        }
+
         if (tokens.length != 4) {
             System.out.println("Usage: register <USERNAME> <PASSWORD> <EMAIL>");
             return;
@@ -65,6 +77,11 @@ public class Repl {
     }
 
     private void login(String[] tokens) {
+        if (loggedIn) {
+            System.out.println("You are already logged in.");
+            return;
+        }
+
         if (tokens.length != 3) {
             System.out.println("Usage: login <USERNAME> <PASSWORD>");
             return;
@@ -76,6 +93,24 @@ public class Repl {
             System.out.println("Logged in as " + username + ".");
         } catch (ResponseException e) {
             System.out.println("Login failed: " + e.getMessage());
+        }
+    }
+
+    private void logout() {
+        if (!loggedIn) {
+            System.out.println("You are not logged in.");
+            return;
+        }
+
+        try {
+            serverFacade.logout(authToken);
+            authToken = null;
+            username = null;
+            loggedIn = false;
+            listedGames.clear();
+            System.out.println("Logged out.");
+        } catch (ResponseException e) {
+            System.out.println("Logout failed: " + e.getMessage());
         }
     }
 
