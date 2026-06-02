@@ -49,6 +49,8 @@ public class Repl {
                 case "register" -> register(tokens);
                 case "login" -> login(tokens);
                 case "logout" -> logout();
+                case "create" -> createGame(tokens);
+                case "list" -> listGames();
                 default -> System.out.println("Unknown command. Type help.");
             }
         }
@@ -112,6 +114,86 @@ public class Repl {
         } catch (ResponseException e) {
             System.out.println("Logout failed: " + e.getMessage());
         }
+    }
+
+    private void createGame(String[] tokens) {
+        if (!requireLogin()) {
+            return;
+        }
+
+        if (tokens.length < 2) {
+            System.out.println("Usage: create <GAME_NAME>");
+            return;
+        }
+
+        String gameName = String.join(" ", copyAfterFirst(tokens));
+
+        try {
+            CreateGameResult result = serverFacade.createGame(gameName, authToken);
+            System.out.println("Created game '" + gameName + "' with game ID " + result.gameID() + ".");
+            System.out.println("Use 'list' to see the updated game list.");
+        } catch (ResponseException e) {
+            System.out.println("Create game failed: " + e.getMessage());
+        }
+    }
+
+    private void listGames() {
+        if (!requireLogin()) {
+            return;
+        }
+
+        try {
+            ListGamesResult result = serverFacade.listGames(authToken);
+            listedGames.clear();
+            listedGames.addAll(result.games());
+
+            if (listedGames.isEmpty()) {
+                System.out.println("No games found.");
+                return;
+            }
+
+            printGames(listedGames);
+        } catch (ResponseException e) {
+            System.out.println("List games failed: " + e.getMessage());
+        }
+    }
+
+    private void printGames(Collection<GameSummary> games) {
+        int displayNumber = 1;
+
+        for (GameSummary game : games) {
+            System.out.println(displayNumber + ". " + game.gameName()
+                    + " | White: " + displayName(game.whiteUsername())
+                    + " | Black: " + displayName(game.blackUsername()));
+            displayNumber++;
+        }
+    }
+
+    private String displayName(String name) {
+        if (name == null) {
+            return "empty";
+        }
+
+        return name;
+    }
+
+    private boolean requireLogin() {
+        if (!loggedIn) {
+            System.out.println("You must be logged in to use this command.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private String[] copyAfterFirst(String[] tokens) {
+        String[] result = new String[tokens.length - 1];
+
+        for (int i = 1; i < tokens.length; i++) {
+            result[i - 1] = tokens[i];
+        }
+
+        return result;
     }
 
     private void saveLogin(AuthResult result) {
