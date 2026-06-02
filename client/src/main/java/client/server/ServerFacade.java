@@ -1,6 +1,14 @@
 package client.server;
 
+import chess.ChessGame;
 import com.google.gson.Gson;
+import request.CreateGameRequest;
+import request.JoinGameRequest;
+import request.LoginRequest;
+import request.RegisterRequest;
+import result.AuthResult;
+import result.CreateGameResult;
+import result.ListGamesResult;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -13,6 +21,34 @@ public class ServerFacade {
 
     public ServerFacade(String serverUrl) {
         this.serverUrl = serverUrl;
+    }
+
+    public AuthResult register(String username, String password, String email) throws ResponseException {
+        RegisterRequest request = new RegisterRequest(username, password, email);
+        return makeRequest("POST", "/user", request, AuthResult.class, null);
+    }
+
+    public AuthResult login(String username, String password) throws ResponseException {
+        LoginRequest request = new LoginRequest(username, password);
+        return makeRequest("POST", "/session", request, AuthResult.class, null);
+    }
+
+    public void logout(String authToken) throws ResponseException {
+        makeRequest("DELETE", "/session", null, null, authToken);
+    }
+
+    public ListGamesResult listGames(String authToken) throws ResponseException {
+        return makeRequest("GET", "/game", null, ListGamesResult.class, authToken);
+    }
+
+    public CreateGameResult createGame(String gameName, String authToken) throws ResponseException {
+        CreateGameRequest request = new CreateGameRequest(gameName);
+        return makeRequest("POST", "/game", request, CreateGameResult.class, authToken);
+    }
+
+    public void joinGame(int gameID, ChessGame.TeamColor playerColor, String authToken) throws ResponseException {
+        JoinGameRequest request = new JoinGameRequest(playerColor, gameID);
+        makeRequest("PUT", "/game", request, null, authToken);
     }
 
     private <T> T makeRequest(String method, String path, Object request, Class<T> responseClass,
