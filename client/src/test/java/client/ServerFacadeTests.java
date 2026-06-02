@@ -5,6 +5,7 @@ import client.server.ServerFacade;
 import org.junit.jupiter.api.*;
 import result.AuthResult;
 import server.Server;
+import org.junit.jupiter.api.Assertions;
 
 public class ServerFacadeTests {
 
@@ -47,5 +48,24 @@ public class ServerFacadeTests {
 
         Assertions.assertEquals("bob", result.username());
         Assertions.assertNotNull(result.authToken());
+    }
+
+    @Test
+    public void loginSuccess() throws ResponseException {
+        facade.register("bob", "password", "bob@email.com");
+
+        AuthResult result = facade.login("bob", "password");
+
+        Assertions.assertEquals("bob", result.username());
+        Assertions.assertNotNull(result.authToken());
+    }
+
+    @Test
+    public void loginBadPassword() throws ResponseException {
+        facade.register("bob", "password", "bob@email.com");
+
+        Assertions.assertThrows(ResponseException.class, () ->
+                facade.login("bob", "wrongPassword")
+        );
     }
 }

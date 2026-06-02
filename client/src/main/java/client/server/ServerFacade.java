@@ -47,7 +47,7 @@ public class ServerFacade {
     }
 
     public void joinGame(int gameID, ChessGame.TeamColor playerColor, String authToken) throws ResponseException {
-        JoinGameRequest request = new JoinGameRequest(playerColor, gameID);
+        JoinGameRequest request = new JoinGameRequest(playerColor.toString(), gameID);
         makeRequest("PUT", "/game", request, null, authToken);
     }
 
