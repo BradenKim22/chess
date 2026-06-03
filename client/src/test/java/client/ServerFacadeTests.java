@@ -1,11 +1,11 @@
 package client;
 
+import chess.ChessGame;
 import client.server.ResponseException;
 import client.server.ServerFacade;
 import org.junit.jupiter.api.*;
 import result.AuthResult;
 import server.Server;
-import org.junit.jupiter.api.Assertions;
 
 public class ServerFacadeTests {
 
@@ -39,12 +39,7 @@ public class ServerFacadeTests {
 
     @Test
     public void registerSuccess() throws ResponseException {
-        AuthResult result =
-                facade.register(
-                        "bob",
-                        "password",
-                        "bob@email.com"
-                );
+        AuthResult result = facade.register("bob", "password", "bob@email.com");
 
         Assertions.assertEquals("bob", result.username());
         Assertions.assertNotNull(result.authToken());
@@ -127,6 +122,42 @@ public class ServerFacadeTests {
     public void logoutUnauthorized() {
         Assertions.assertThrows(ResponseException.class, () ->
                 facade.logout("bad-token")
+        );
+    }
+
+    @Test
+    public void joinGameSuccess() throws ResponseException {
+        AuthResult auth = facade.register("bob", "password", "bob@email.com");
+
+        var game = facade.createGame("My Game", auth.authToken());
+
+        facade.joinGame(game.gameID(), ChessGame.TeamColor.WHITE, auth.authToken());
+    }
+
+    @Test
+    public void joinGameUnauthorized() throws ResponseException {
+        AuthResult auth = facade.register("bob", "password", "bob@email.com");
+
+        var game = facade.createGame("My Game", auth.authToken());
+
+        Assertions.assertThrows(ResponseException.class, () ->
+                facade.joinGame(game.gameID(), ChessGame.TeamColor.WHITE, "bad-token")
+        );
+    }
+
+    @Test
+    public void joinGameAlreadyTaken() throws ResponseException {
+        AuthResult bob = facade.register("bob", "password", "bob@email.com");
+
+        var game = facade.createGame("My Game", bob.authToken());
+
+        facade.joinGame(game.gameID(), ChessGame.TeamColor.WHITE, bob.authToken());
+        facade.logout(bob.authToken());
+
+        AuthResult amy = facade.register("amy", "password", "amy@email.com");
+
+        Assertions.assertThrows(ResponseException.class, () ->
+                facade.joinGame(game.gameID(), ChessGame.TeamColor.WHITE, amy.authToken())
         );
     }
 }
