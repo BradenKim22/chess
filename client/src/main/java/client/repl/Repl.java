@@ -1,11 +1,13 @@
 package client.repl;
 
+import chess.ChessGame;
 import client.server.ResponseException;
 import client.server.ServerFacade;
 import result.AuthResult;
 import result.CreateGameResult;
 import result.GameSummary;
 import result.ListGamesResult;
+import ui.BoardPrinter;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,6 +17,7 @@ public class Repl {
 
     private final Scanner scanner = new Scanner(System.in);
     private final ServerFacade serverFacade;
+    private final BoardPrinter boardPrinter = new BoardPrinter();
 
     private boolean loggedIn = false;
     private String authToken;
@@ -51,6 +54,8 @@ public class Repl {
                 case "logout" -> logout();
                 case "create" -> createGame(tokens);
                 case "list" -> listGames();
+                case "play" -> playGame(tokens);
+                case "observe" -> observeGame(tokens);
                 default -> System.out.println("Unknown command. Type help.");
             }
         }
@@ -99,17 +104,13 @@ public class Repl {
     }
 
     private void logout() {
-        if (!loggedIn) {
-            System.out.println("You are not logged in.");
+        if (!requireLogin()) {
             return;
         }
 
         try {
             serverFacade.logout(authToken);
-            authToken = null;
-            username = null;
-            loggedIn = false;
-            listedGames.clear();
+            clearLogin();
             System.out.println("Logged out.");
         } catch (ResponseException e) {
             System.out.println("Logout failed: " + e.getMessage());
@@ -158,6 +159,67 @@ public class Repl {
         }
     }
 
+    private void playGame(String[] tokens) {
+        if (!requireLogin()) {
+            return;
+        }
+
+        if (tokens.length != 3) {
+            System.out.println("Usage: play <GAME_NUMBER> <WHITE|BLACK>");
+            return;
+        }
+
+        try {
+            int displayNumber = Integer.parseInt(tokens[1]);
+            GameSummary game = getListedGame(displayNumber);
+            ChessGame.TeamColor color = parseTeamColor(tokens[2]);
+
+            serverFacade.joinGame(game.gameID(), color, authToken);
+
+            System.out.println("Joined game '" + game.gameName() + "' as " + color + ".");
+            boardPrinter.printBoard(color);
+        } catch (NumberFormatException e) {
+            System.out.println("Game number must be a number from the list.");
+        } catch (IllegalArgumentException e) {
+            System.out.println("Color must be WHITE or BLACK.");
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Invalid game number. Use 'list' to see available games.");
+        } catch (ResponseException e) {
+            System.out.println("Join game failed: " + e.getMessage());
+        }
+    }
+
+    private void observeGame(String[] tokens) {
+        if (!requireLogin()) {
+            return;
+        }
+
+        if (tokens.length != 2) {
+            System.out.println("Usage: observe <GAME_NUMBER>");
+            return;
+        }
+
+        try {
+            int displayNumber = Integer.parseInt(tokens[1]);
+            GameSummary game = getListedGame(displayNumber);
+
+            System.out.println("Observing game '" + game.gameName() + "'.");
+            boardPrinter.printBoard(ChessGame.TeamColor.WHITE);
+        } catch (NumberFormatException e) {
+            System.out.println("Game number must be a number from the list.");
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Invalid game number. Use 'list' to see available games.");
+        }
+    }
+
+    private GameSummary getListedGame(int displayNumber) {
+        return listedGames.get(displayNumber - 1);
+    }
+
+    private ChessGame.TeamColor parseTeamColor(String colorText) {
+        return ChessGame.TeamColor.valueOf(colorText.toUpperCase());
+    }
+
     private void printGames(Collection<GameSummary> games) {
         int displayNumber = 1;
 
@@ -200,6 +262,13 @@ public class Repl {
         authToken = result.authToken();
         username = result.username();
         loggedIn = true;
+    }
+
+    private void clearLogin() {
+        authToken = null;
+        username = null;
+        loggedIn = false;
+        listedGames.clear();
     }
 
     private void printPrompt() {
