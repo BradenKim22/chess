@@ -62,12 +62,12 @@ public class BoardPrinter {
     }
 
     private void setSquareColor(int row, int col) {
-        boolean lightSquare = (row + col) % 2 == 0;
+        boolean darkSquare = (row + col) % 2 == 0;
 
-        if (lightSquare) {
-            System.out.print(EscapeSequences.SET_BG_COLOR_WHITE);
-        } else {
+        if (darkSquare) {
             System.out.print(EscapeSequences.SET_BG_COLOR_DARK_GREY);
+        } else {
+            System.out.print(EscapeSequences.SET_BG_COLOR_WHITE);
         }
 
         System.out.print(EscapeSequences.SET_TEXT_COLOR_BLACK);

@@ -108,11 +108,17 @@ public class ServerFacade {
         InputStream errorStream = connection.getErrorStream();
 
         if (errorStream == null) {
-            return "Error: request failed";
+            return "request failed";
         }
 
         try (InputStreamReader reader = new InputStreamReader(errorStream)) {
-            return gson.fromJson(reader, Object.class).toString();
+            var errorResponse = gson.fromJson(reader, result.ErrorResult.class);
+
+            if (errorResponse != null && errorResponse.message() != null) {
+                return errorResponse.message();
+            }
+
+            return "request failed";
         }
     }
 }

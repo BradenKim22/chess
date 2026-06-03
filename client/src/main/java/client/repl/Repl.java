@@ -130,8 +130,8 @@ public class Repl {
         String gameName = String.join(" ", copyAfterFirst(tokens));
 
         try {
-            CreateGameResult result = serverFacade.createGame(gameName, authToken);
-            System.out.println("Created game '" + gameName + "' with game ID " + result.gameID() + ".");
+            serverFacade.createGame(gameName, authToken);
+            System.out.println("Created game '" + gameName + "'.");
             System.out.println("Use 'list' to see the updated game list.");
         } catch (ResponseException e) {
             System.out.println("Create game failed: " + e.getMessage());
