@@ -19,6 +19,7 @@ import result.CreateGameResult;
 import result.ErrorResult;
 import result.GameSummary;
 import result.ListGamesResult;
+import server.websocket.WebSocketHandler;
 import service.ClearService;
 import service.GameService;
 import service.UserService;
@@ -33,6 +34,7 @@ public class Server {
     private final ClearService clearService;
     private final UserService userService;
     private final GameService gameService;
+    private final WebSocketHandler webSocketHandler;
 
     private Javalin app;
 
@@ -42,6 +44,7 @@ public class Server {
             clearService = new ClearService(dataAccess);
             userService = new UserService(dataAccess);
             gameService = new GameService(dataAccess);
+            webSocketHandler = new WebSocketHandler(gameService);
         } catch (DataAccessException e) {
             throw new RuntimeException(e);
         }
@@ -57,6 +60,7 @@ public class Server {
         });
 
         registerRoutes();
+        registerWebSocket();
 
         app.start(desiredPort);
         return app.port();
@@ -74,6 +78,14 @@ public class Server {
         app.get("/game", this::listGames);
         app.post("/game", this::createGame);
         app.put("/game", this::joinGame);
+    }
+
+    private void registerWebSocket() {
+        app.ws("/ws", ws -> {
+            ws.onConnect(webSocketHandler::onConnect);
+            ws.onMessage(webSocketHandler::onMessage);
+            ws.onClose(webSocketHandler::onClose);
+        });
     }
 
     private void clearDatabase(Context ctx) {
