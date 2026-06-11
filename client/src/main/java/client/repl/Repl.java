@@ -4,10 +4,8 @@ import chess.ChessGame;
 import client.server.ResponseException;
 import client.server.ServerFacade;
 import result.AuthResult;
-import result.CreateGameResult;
 import result.GameSummary;
 import result.ListGamesResult;
-import ui.BoardPrinter;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,8 +14,8 @@ import java.util.Scanner;
 public class Repl {
 
     private final Scanner scanner = new Scanner(System.in);
+    private final String serverUrl;
     private final ServerFacade serverFacade;
-    private final BoardPrinter boardPrinter = new BoardPrinter();
 
     private boolean loggedIn = false;
     private String authToken;
@@ -25,6 +23,7 @@ public class Repl {
     private final ArrayList<GameSummary> listedGames = new ArrayList<>();
 
     public Repl(String serverUrl) {
+        this.serverUrl = serverUrl;
         serverFacade = new ServerFacade(serverUrl);
     }
 
@@ -177,7 +176,16 @@ public class Repl {
             serverFacade.joinGame(game.gameID(), color, authToken);
 
             System.out.println("Joined game '" + game.gameName() + "' as " + color + ".");
-            boardPrinter.printBoard(color);
+
+            GameplayRepl gameplayRepl = new GameplayRepl(
+                    serverUrl,
+                    authToken,
+                    game.gameID(),
+                    color,
+                    scanner
+            );
+
+            gameplayRepl.run();
         } catch (NumberFormatException e) {
             System.out.println("Game number must be a number from the list.");
         } catch (IllegalArgumentException e) {
@@ -204,7 +212,16 @@ public class Repl {
             GameSummary game = getListedGame(displayNumber);
 
             System.out.println("Observing game '" + game.gameName() + "'.");
-            boardPrinter.printBoard(ChessGame.TeamColor.WHITE);
+
+            GameplayRepl gameplayRepl = new GameplayRepl(
+                    serverUrl,
+                    authToken,
+                    game.gameID(),
+                    ChessGame.TeamColor.WHITE,
+                    scanner
+            );
+
+            gameplayRepl.run();
         } catch (NumberFormatException e) {
             System.out.println("Game number must be a number from the list.");
         } catch (IndexOutOfBoundsException e) {
