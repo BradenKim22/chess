@@ -4,13 +4,21 @@ import chess.ChessBoard;
 import chess.ChessGame;
 import chess.ChessPiece;
 import chess.ChessPosition;
+import model.GameData;
 
 public class BoardPrinter {
 
     public void printBoard(ChessGame.TeamColor perspective) {
         ChessBoard board = new ChessBoard();
         board.resetBoard();
+        printBoard(board, perspective);
+    }
 
+    public void printBoard(GameData gameData, ChessGame.TeamColor perspective) {
+        printBoard(gameData.game().getBoard(), perspective);
+    }
+
+    private void printBoard(ChessBoard board, ChessGame.TeamColor perspective) {
         if (perspective == ChessGame.TeamColor.BLACK) {
             printBlackPerspective(board);
         } else {
@@ -41,11 +49,11 @@ public class BoardPrinter {
     }
 
     private void printHeaderWhite() {
-        System.out.println("    a   b   c  d   e   f  g   h");
+        System.out.println("      a  b  c  d  e  f  g  h");
     }
 
     private void printHeaderBlack() {
-        System.out.println("    h   g   f  e   d   c  b   a");
+        System.out.println("      h  g  f  e  d  c  b  a");
     }
 
     private void printRow(ChessBoard board, int row, int startCol, int endCol, int step) {

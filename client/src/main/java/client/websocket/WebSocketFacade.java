@@ -1,9 +1,16 @@
 package client.websocket;
 
 import com.google.gson.Gson;
+import jakarta.websocket.ClientEndpointConfig;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.Endpoint;
+import jakarta.websocket.EndpointConfig;
+import jakarta.websocket.MessageHandler;
+import jakarta.websocket.Session;
+import jakarta.websocket.WebSocketContainer;
 import websocket.commands.UserGameCommand;
 
-import jakarta.websocket.*;
 import java.net.URI;
 
 public class WebSocketFacade extends Endpoint {
@@ -23,7 +30,9 @@ public class WebSocketFacade extends Endpoint {
         URI uri = new URI(serverUrl.replace("http", "ws") + "/ws");
 
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-        session = container.connectToServer(this, uri);
+        ClientEndpointConfig config = ClientEndpointConfig.Builder.create().build();
+
+        session = container.connectToServer(this, config, uri);
 
         send(new UserGameCommand(UserGameCommand.CommandType.CONNECT, authToken, gameID));
     }
@@ -41,7 +50,7 @@ public class WebSocketFacade extends Endpoint {
     }
 
     public void close() throws Exception {
-        if (session != null) {
+        if (session != null && session.isOpen()) {
             session.close();
         }
     }
@@ -50,14 +59,31 @@ public class WebSocketFacade extends Endpoint {
     public void onOpen(Session session, EndpointConfig config) {
         this.session = session;
 
-        session.addMessageHandler((MessageHandler.Whole<String>) message -> {
-            if (observer != null) {
-                observer.notify(message);
+        session.addMessageHandler(new MessageHandler.Whole<String>() {
+            @Override
+            public void onMessage(String message) {
+                if (observer != null) {
+                    observer.notify(message);
+                }
             }
         });
     }
 
+    @Override
+    public void onClose(Session session, CloseReason closeReason) {
+        System.out.println("WebSocket closed: " + closeReason.getReasonPhrase());
+    }
+
+    @Override
+    public void onError(Session session, Throwable throwable) {
+        System.out.println("WebSocket error: " + throwable.getMessage());
+    }
+
     private void send(UserGameCommand command) throws Exception {
+        if (session == null || !session.isOpen()) {
+            throw new IllegalStateException("WebSocket connection is closed.");
+        }
+
         session.getBasicRemote().sendText(gson.toJson(command));
     }
 }
