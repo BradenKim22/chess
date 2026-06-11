@@ -21,6 +21,16 @@ public class ConnectionManager {
         );
     }
 
+    public Connection getBySession(String sessionId) {
+        for (Connection connection : connections) {
+            if (connection.session().sessionId().equals(sessionId)) {
+                return connection;
+            }
+        }
+
+        return null;
+    }
+
     public Set<Connection> getConnectionsForGame(int gameID) {
         Set<Connection> result = new HashSet<>();
 
