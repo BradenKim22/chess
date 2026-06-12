@@ -16,6 +16,7 @@ import websocket.messages.ErrorMessage;
 import websocket.messages.LoadGameMessage;
 import websocket.messages.NotificationMessage;
 
+import java.util.Collection;
 import java.util.Scanner;
 
 public class GameplayRepl implements ServerMessageObserver {
@@ -173,7 +174,24 @@ public class GameplayRepl implements ServerMessageObserver {
             return;
         }
 
-        System.out.println("Highlight legal moves is not implemented yet.");
+        if (currentGame == null) {
+            System.out.println("Board has not loaded yet.");
+            return;
+        }
+
+        try {
+            ChessPosition position = parsePosition(tokens[1]);
+            Collection<ChessMove> validMoves = currentGame.game().validMoves(position);
+
+            if (validMoves == null || validMoves.isEmpty()) {
+                System.out.println("No legal moves for that position.");
+                return;
+            }
+
+            boardPrinter.printBoard(currentGame, perspective, validMoves);
+        } catch (Exception e) {
+            System.out.println("Highlight failed: " + e.getMessage());
+        }
     }
 
     private ChessPosition parsePosition(String text) {
