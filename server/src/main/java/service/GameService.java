@@ -103,7 +103,6 @@ public class GameService {
             throw new DataAccessException("bad request");
         }
 
-        resignedGames.remove(gameID);
         return game;
     }
 
