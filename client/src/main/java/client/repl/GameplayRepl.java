@@ -93,6 +93,8 @@ public class GameplayRepl implements ServerMessageObserver {
     private void handleLoadGame(String message) {
         LoadGameMessage loadGameMessage = gson.fromJson(message, LoadGameMessage.class);
         currentGame = loadGameMessage.getGame();
+
+        System.out.println();
         redrawBoard();
     }
 
