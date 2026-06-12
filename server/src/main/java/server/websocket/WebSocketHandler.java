@@ -24,7 +24,7 @@ public class WebSocketHandler {
     }
 
     public void onConnect(WsConnectContext ctx) {
-        // The actual game connection happens after the client sends CONNECT.
+        // Wait for the client to send a CONNECT command.
     }
 
     public void onMessage(WsMessageContext ctx) {
@@ -94,7 +94,6 @@ public class WebSocketHandler {
         }
 
         String username = gameService.leave(command.getAuthToken(), command.getGameID());
-
         connectionManager.remove(sender);
 
         String message = username + " left the game.";

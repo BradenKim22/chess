@@ -2,7 +2,6 @@ package client.websocket;
 
 import com.google.gson.Gson;
 import jakarta.websocket.ClientEndpointConfig;
-import jakarta.websocket.CloseReason;
 import jakarta.websocket.ContainerProvider;
 import jakarta.websocket.Endpoint;
 import jakarta.websocket.EndpointConfig;
@@ -12,12 +11,17 @@ import jakarta.websocket.WebSocketContainer;
 import websocket.commands.UserGameCommand;
 
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class WebSocketFacade extends Endpoint {
 
     private final Gson gson = new Gson();
     private final String serverUrl;
     private final ServerMessageObserver observer;
+    private final ScheduledExecutorService keepAlive = Executors.newSingleThreadScheduledExecutor();
 
     private Session session;
 
@@ -35,6 +39,7 @@ public class WebSocketFacade extends Endpoint {
         session = container.connectToServer(this, config, uri);
 
         send(new UserGameCommand(UserGameCommand.CommandType.CONNECT, authToken, gameID));
+        startKeepAlive();
     }
 
     public void makeMove(UserGameCommand command) throws Exception {
@@ -50,6 +55,8 @@ public class WebSocketFacade extends Endpoint {
     }
 
     public void close() throws Exception {
+        keepAlive.shutdownNow();
+
         if (session != null && session.isOpen()) {
             session.close();
         }
@@ -69,14 +76,15 @@ public class WebSocketFacade extends Endpoint {
         });
     }
 
-    @Override
-    public void onClose(Session session, CloseReason closeReason) {
-        System.out.println("WebSocket closed: " + closeReason.getReasonPhrase());
-    }
-
-    @Override
-    public void onError(Session session, Throwable throwable) {
-        System.out.println("WebSocket error: " + throwable.getMessage());
+    private void startKeepAlive() {
+        keepAlive.scheduleAtFixedRate(() -> {
+            try {
+                if (session != null && session.isOpen()) {
+                    session.getBasicRemote().sendPing(ByteBuffer.wrap(new byte[0]));
+                }
+            } catch (Exception ignored) {
+            }
+        }, 10, 10, TimeUnit.SECONDS);
     }
 
     private void send(UserGameCommand command) throws Exception {

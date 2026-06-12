@@ -2,47 +2,64 @@ package ui;
 
 import chess.ChessBoard;
 import chess.ChessGame;
+import chess.ChessMove;
 import chess.ChessPiece;
 import chess.ChessPosition;
 import model.GameData;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 public class BoardPrinter {
 
     public void printBoard(ChessGame.TeamColor perspective) {
         ChessBoard board = new ChessBoard();
         board.resetBoard();
-        printBoard(board, perspective);
+        printBoard(board, perspective, Set.of());
     }
 
     public void printBoard(GameData gameData, ChessGame.TeamColor perspective) {
-        printBoard(gameData.game().getBoard(), perspective);
+        printBoard(gameData.game().getBoard(), perspective, Set.of());
     }
 
-    private void printBoard(ChessBoard board, ChessGame.TeamColor perspective) {
+    public void printBoard(GameData gameData, ChessGame.TeamColor perspective,
+                           Collection<ChessMove> highlightedMoves) {
+        Set<ChessPosition> highlightedPositions = new HashSet<>();
+
+        for (ChessMove move : highlightedMoves) {
+            highlightedPositions.add(move.getEndPosition());
+        }
+
+        printBoard(gameData.game().getBoard(), perspective, highlightedPositions);
+    }
+
+    private void printBoard(ChessBoard board, ChessGame.TeamColor perspective,
+                            Set<ChessPosition> highlightedPositions) {
         if (perspective == ChessGame.TeamColor.BLACK) {
-            printBlackPerspective(board);
+            printBlackPerspective(board, highlightedPositions);
         } else {
-            printWhitePerspective(board);
+            printWhitePerspective(board, highlightedPositions);
         }
 
         resetColors();
     }
 
-    private void printWhitePerspective(ChessBoard board) {
+    private void printWhitePerspective(ChessBoard board, Set<ChessPosition> highlightedPositions) {
         printHeaderWhite();
 
         for (int row = 8; row >= 1; row--) {
-            printRow(board, row, 1, 8, 1);
+            printRow(board, row, 1, 8, 1, highlightedPositions);
         }
 
         printHeaderWhite();
     }
 
-    private void printBlackPerspective(ChessBoard board) {
+    private void printBlackPerspective(ChessBoard board, Set<ChessPosition> highlightedPositions) {
         printHeaderBlack();
 
         for (int row = 1; row <= 8; row++) {
-            printRow(board, row, 8, 1, -1);
+            printRow(board, row, 8, 1, -1, highlightedPositions);
         }
 
         printHeaderBlack();
@@ -56,12 +73,15 @@ public class BoardPrinter {
         System.out.println("      h  g  f  e  d  c  b  a");
     }
 
-    private void printRow(ChessBoard board, int row, int startCol, int endCol, int step) {
+    private void printRow(ChessBoard board, int row, int startCol, int endCol,
+                          int step, Set<ChessPosition> highlightedPositions) {
         System.out.print(" " + row + " ");
 
         for (int col = startCol; col != endCol + step; col += step) {
-            setSquareColor(row, col);
-            ChessPiece piece = board.getPiece(new ChessPosition(row, col));
+            ChessPosition position = new ChessPosition(row, col);
+            setSquareColor(row, col, highlightedPositions.contains(position));
+
+            ChessPiece piece = board.getPiece(position);
             System.out.print(pieceSymbol(piece));
         }
 
@@ -69,13 +89,17 @@ public class BoardPrinter {
         System.out.println(" " + row);
     }
 
-    private void setSquareColor(int row, int col) {
-        boolean darkSquare = (row + col) % 2 == 0;
-
-        if (darkSquare) {
-            System.out.print(EscapeSequences.SET_BG_COLOR_DARK_GREY);
+    private void setSquareColor(int row, int col, boolean highlighted) {
+        if (highlighted) {
+            System.out.print(EscapeSequences.SET_BG_COLOR_GREEN);
         } else {
-            System.out.print(EscapeSequences.SET_BG_COLOR_WHITE);
+            boolean darkSquare = (row + col) % 2 == 0;
+
+            if (darkSquare) {
+                System.out.print(EscapeSequences.SET_BG_COLOR_DARK_GREY);
+            } else {
+                System.out.print(EscapeSequences.SET_BG_COLOR_WHITE);
+            }
         }
 
         System.out.print(EscapeSequences.SET_TEXT_COLOR_BLACK);

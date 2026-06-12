@@ -115,11 +115,7 @@ public class GameService {
             throw new DataAccessException("bad request");
         }
 
-        if (isGameOver(gameData.game())) {
-            throw new DataAccessException("game is over");
-        }
-
-        if (resignedGames.contains(gameID)) {
+        if (isGameOver(gameData.game()) || resignedGames.contains(gameID)) {
             throw new DataAccessException("game is over");
         }
 
