@@ -1,5 +1,9 @@
 package server.websocket;
 
+import chess.ChessGame;
+import chess.ChessMove;
+import chess.ChessPiece;
+import chess.ChessPosition;
 import com.google.gson.Gson;
 import dataaccess.DataAccessException;
 import io.javalin.websocket.WsCloseContext;
@@ -57,8 +61,8 @@ public class WebSocketHandler {
 
         send(connection, new LoadGameMessage(game));
 
-        String message = auth.username() + " connected to the game.";
-        notifyOthers(command.getGameID(), connection, message);
+        String role = getRole(auth.username(), game);
+        notifyOthers(command.getGameID(), connection, auth.username() + " joined as " + role + ".");
     }
 
     private void makeMove(WsMessageContext ctx, UserGameCommand command) throws DataAccessException {
@@ -68,21 +72,31 @@ public class WebSocketHandler {
             throw new DataAccessException("unauthorized");
         }
 
+        GameData gameBeforeMove = gameService.connect(command.getAuthToken(), command.getGameID());
+        ChessMove move = command.getMove();
+        ChessPiece piece = gameBeforeMove.game().getBoard().getPiece(move.getStartPosition());
+
         GameData updatedGame = gameService.makeMove(
                 command.getAuthToken(),
                 command.getGameID(),
-                command.getMove()
+                move
         );
 
         sendLoadGameToAll(command.getGameID(), updatedGame);
 
-        String moveMessage = sender.username() + " made a move.";
+        String moveMessage = sender.username()
+                + " moved " + pieceName(piece)
+                + " from " + positionName(move.getStartPosition())
+                + " to " + positionName(move.getEndPosition()) + ".";
+
         notifyOthers(command.getGameID(), sender, moveMessage);
 
         if (gameService.isInCheckmate(updatedGame)) {
-            sendNotificationToAll(command.getGameID(), "A player is in checkmate.");
+            sendNotificationToAll(command.getGameID(),
+                    checkedPlayerName(updatedGame) + " is in checkmate.");
         } else if (gameService.isInCheck(updatedGame)) {
-            sendNotificationToAll(command.getGameID(), "A player is in check.");
+            sendNotificationToAll(command.getGameID(),
+                    checkedPlayerName(updatedGame) + " is in check.");
         }
     }
 
@@ -96,8 +110,7 @@ public class WebSocketHandler {
         String username = gameService.leave(command.getAuthToken(), command.getGameID());
         connectionManager.remove(sender);
 
-        String message = username + " left the game.";
-        sendNotificationToAll(command.getGameID(), message);
+        sendNotificationToAll(command.getGameID(), username + " left the game.");
     }
 
     private void resign(WsMessageContext ctx, UserGameCommand command) throws DataAccessException {
@@ -109,8 +122,42 @@ public class WebSocketHandler {
 
         gameService.resign(command.getAuthToken(), command.getGameID());
 
-        String message = sender.username() + " resigned.";
-        sendNotificationToAll(command.getGameID(), message);
+        sendNotificationToAll(command.getGameID(), sender.username() + " resigned.");
+    }
+
+    private String getRole(String username, GameData game) {
+        if (username.equals(game.whiteUsername())) {
+            return "WHITE";
+        }
+
+        if (username.equals(game.blackUsername())) {
+            return "BLACK";
+        }
+
+        return "an observer";
+    }
+
+    private String checkedPlayerName(GameData game) {
+        ChessGame.TeamColor checkedColor = game.game().getTeamTurn();
+
+        if (checkedColor == ChessGame.TeamColor.WHITE) {
+            return game.whiteUsername();
+        }
+
+        return game.blackUsername();
+    }
+
+    private String pieceName(ChessPiece piece) {
+        if (piece == null) {
+            return "piece";
+        }
+
+        return piece.getPieceType().name().toLowerCase();
+    }
+
+    private String positionName(ChessPosition position) {
+        char file = (char) ('a' + position.getColumn() - 1);
+        return "" + file + position.getRow();
     }
 
     private void sendLoadGameToAll(int gameID, GameData game) {
